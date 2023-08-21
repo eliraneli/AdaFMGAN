@@ -1,0 +1,75 @@
+{
+
+        "name": "001_adafmmodel_DIV2K"
+            , 'is_train': True
+        ,"use_tb_logger": True
+        ,"model": "sr"
+        ,"finetune_norm": True
+        ,"crop_size": 0 ##for image restoration | upscale(x2, x3, x4) for SR
+        ,"gpu_ids": [0] ## gpu
+        ,"GAN": True #False
+        ,"datasets": {
+            "train": {
+                "name": "DIV2K"
+                , "mode": "LRHR"
+                ,'data_type': "lmdb"
+                , "phase": 'train'
+                , "dataroot_HR": "Datasets/DIV2K_train_HR/DIV2K800_HR_lmdb/"  ## path for HR images
+                , "dataroot_LR": "Datasets/DIV2K_train_LR_bicubic_X4/DIV2K_train_LR_bicubic/DIV2K800_LR_X4_lmdb/"
+        , "subset_file": None
+        , "use_shuffle": True
+        , "n_workers": 0
+        , "batch_size": 16 ## batch size
+        , "HR_size": 96 ## crop szie for the HR image
+        , "use_flip": True
+        , "use_rot": True
+        }
+        , "val": {
+            "name": "val_CBSD68"
+            , "mode": "LRHR"
+            , 'data_type': "lmdb"
+            ,"phase": 'val'
+            , "dataroot_HR": "Datasets/DIV2K_valid_HR/DIV2K800_HR_lmdb/"  ## path for HR images
+            , "dataroot_LR": "Datasets/DIV2K_valid_LR_bicubic_X4/DIV2K_valid_LR_bicubic/DIV2K800_LR_X4_lmdb"
+        }
+        }
+        ,"path": {
+            "root": "../" ## the path root for the current experiment
+        , "resume_state": None 
+        , "pretrain_model_G": "Models/Basic/latest_G.pth" ## path for pretrained model
+        , "pretrain_model_D":"Models/Basic/latest_D.pth" ## None ## path for pretrained model
+               ,"experiments_root": "Experiments/_archived_220803-20a1628"
+                , "log": "Logs/"
+                , "val_images": "Val_images/"
+                , "models": "Models/AdaFM/"
+                , "training_state": "Training_state/"
+        }
+        , "network_G": {
+        "which_model_G": "adaptive_resnet"
+        , "norm_type": "adafm" ## basic | adafm | null | instance | batch
+        , "nf": 64 ## the number of the channel
+        , "nb": 16 ## the number of the residual blocks
+        , "in_nc": 3 ## the number of the input channel
+        , "out_nc": 3 ## the number of the output channel
+        , "adafm_ksize": 5 ## the filtersize of adafm during finetune
+        , "height" : 480
+        , "width": 480
+        }
+        , "train": {
+            "lr_G": 1e-4 ## learning rate
+        , "lr_scheme": "MultiStepLR" ## learning rate decay scheme
+        , "lr_steps": [500000] ## atwhichsteps, decay the learining rate
+        , "lr_gamma": 0.1 ## learning rated decreases by a factor of 0.1
+        , "pixel_criterion": "l1" ## l1 loss
+        , "pixel_weight": 1.0 ##theweight ofl1loss
+        , "val_freq": 5e1 ## how often do you want to do validation
+
+        , "manual_seed": 0
+        , "niter": 3e5 #1e5 ##1e6 ## the total number of the training iterations
+        }
+
+        , "logger": {
+            "print_freq": 200 ##how often to log the training stats
+            , "save_checkpoint_freq": 1e3 ## how often to save the checkpoints
+        }
+        }
