@@ -17,6 +17,8 @@ class SRModel(BaseModel):
 
         # define network and load pretrained models
         self.netG = networks.define_G(opt).to(self.device)
+        self.netD = networks.define_D(opt).to(self.device)
+        self.isGAN = opt["GAN"]
         self.load()
 
         if self.is_train:
@@ -37,20 +39,26 @@ class SRModel(BaseModel):
 
             # find the parameters to optimize
             if opt['finetune_norm']:
-                optim_params = []
+                optim_params_G = []
+                optim_params_D = list(self.netD.parameters())
                 for k, v in self.netG.named_parameters():
                     v.requires_grad = False
                     if k.find('transformer') >= 0:
                         v.requires_grad = True
                         v.data.zero_()
-                        optim_params.append(v)
+                        optim_params_G.append(v)
                         logger.info('Params [{:s}] initialized to 0 and will optimize.'.format(k))
             else:
                 optim_params = list(self.netG.parameters())
+                optim_params_D = list(self.netD.parameters())
 
             self.optimizer_G = torch.optim.Adam(
                 optim_params, lr=train_opt['lr_G'], weight_decay=wd_G)
             self.optimizers.append(self.optimizer_G)
+
+            if opt["GAN"]:
+                self.optimizer_D = torch.optim.Adam(optim_params_D,  lr=train_opt['lr_G'], weight_decay=wd_G)
+                self.optimizers.append(self.optimizer_D)
 
             # schedulers
             if train_opt['lr_scheme'] == 'MultiStepLR':
@@ -72,9 +80,28 @@ class SRModel(BaseModel):
     def optimize_parameters(self, step):
         self.optimizer_G.zero_grad()
         self.fake_H = self.netG(self.var_L)
+        pred_real = self.netD(self.real_H).detach()
+        pred_fake = self.netD(self.fake_H)
         l_pix = self.l_pix_w * self.cri_pix(self.fake_H, self.real_H)
         l_pix.backward()
         self.optimizer_G.step()
+
+        if self.isGAN:
+            _t = (1,6,6) #self.netD.module.output_shape
+            valid = Variable(Tensor(np.ones((self.fake_H.size(0), *_t))), requires_grad=True)
+            fake = Variable(Tensor(np.zeros((self.fake_H.size(0), *_t))), requires_grad=True)
+            self.optimizer_D.zero_grad()
+
+            loss_real = self.criterion_GAN(valid,pred_real - pred_fake.mean(0, keepdim=True))
+            loss_fake = self.criterion_GAN(fake,pred_fake - pred_real.mean(0, keepdim=True))
+
+            loss_D = (loss_real + loss_fake) / 2
+            print(loss_D.item())
+            logger.info('Loss_D: {}'.format(str(loss_D)))
+
+            self.optimizer_D.step()
+
+            self.log_dict['l_dis'] = loss_D.item()
 
         # set log
         self.log_dict['l_pix'] = l_pix.item()
@@ -104,6 +131,17 @@ class SRModel(BaseModel):
         else:
             net_struc_str = '{}'.format(self.netG.__class__.__name__)
 
+        if self.isGAN:
+            s, n = self.get_network_description(self.netD)
+            if isinstance(self.netD, nn.DataParallel):
+                net_struc_str = '{} - {}'.format(self.netD.__class__.__name__,
+                                                 self.netD.module.__class__.__name__)
+            else:
+                net_struc_str = '{}'.format(self.netD.__class__.__name__)
+
+            logger.info('Network D structure: {}, with parameters: {:,d}'.format(net_struc_str, n))
+            logger.info(s)
+
         logger.info('Network G structure: {}, with parameters: {:,d}'.format(net_struc_str, n))
         logger.info(s)
 
@@ -123,3 +161,5 @@ class SRModel(BaseModel):
 
     def save(self, iter_step):
         self.save_network(self.netG, 'G', iter_step)
+        if self.isGAN:
+            self.save_network(self.netD, 'D', iter_step)
