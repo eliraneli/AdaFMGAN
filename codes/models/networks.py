@@ -97,3 +97,17 @@ def define_G(opt):
         assert torch.cuda.is_available()
         netG = nn.DataParallel(netG)
     return netG
+
+def define_D(opt):
+    opt_net = opt['network_G']
+    gpu_ids = opt['gpu_ids']
+    hr_shape = (opt_net["height"], opt_net["width"])
+    discriminator = arch.Discriminator(input_shape=(opt_net["in_nc"],*hr_shape ))
+    if opt['is_train']:
+        init_weights(discriminator, init_type='kaiming', scale=0.1)
+
+    if gpu_ids:
+        assert torch.cuda.is_available()
+        discriminator = nn.DataParallel(discriminator)
+
+    return discriminator
