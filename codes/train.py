@@ -77,6 +77,7 @@ def main():
 
     # create model
     model = create_model(opt)
+    optimizer_D = torch.optim.Adam(model.netD.parameters(), lr=opt["train"]["lr_G"])
 
     # resume training
     if resume_state:
