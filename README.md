@@ -1,29 +1,18 @@
-# Modulating Image Restoration with Continual Levels via Adaptive Feature Modification Layers [paper](https://arxiv.org/abs/1904.08118), [supplementary file](http://openaccess.thecvf.com/content_CVPR_2019/supplemental/He_Modulating_Image_Restoration_CVPR_2019_supplemental.pdf)
-By Jingwen He, [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), and [Yu Qiao](http://mmlab.siat.ac.cn/yuqiao/)
+# Modulating Image Restoration with GAN archticture via Adaptive Feature Modification Layers
 
+Jingwen He, [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), and [Yu Qiao](http://mmlab.siat.ac.cn/yuqiao/) represent image restoration with continual levels via adaptive feature modification layers [paper](https://arxiv.org/abs/1904.08118) . 
+
+SuperResolution on convolutional networks, the interpolation to go from high to low resolution levels is simple.
+The problem lies when you want to go from low to high resolution, so a wider precision of the pixels and a new "creation" of pixels is needed.
+Convolutional networks are difficult for them in this task and therefore esrgan's architecture can adapt to the transition from low resolution to high resolution.
+
+I and [Harel Keller](https://github.com/harel12k) took the ESRGAN network and plugin the AdaFM block as cakked ELGAN on the network
+it can be seen that there is an improvement in the transition from low resolutions to high resolutions. 
 <p align="center">
-  <img height="250" src="./figures/framework.PNG">
+  <img height="250" src="./figures/framework1.PNG">
 </p>
 
-```python
-class AdaptiveFM(nn.Module):
-    def __init__(self, in_channel, kernel_size):
-        super(AdaptiveFM, self).__init__()
-        padding = (kernel_size - 1) // 2
-        self.transformer = nn.Conv2d(in_channel, in_channel, kernel_size, padding=padding, groups=in_channel)
 
-    def forward(self, x):
-        return self.transformer(x) + x
-```
-
-### BibTex
-    @InProceedings{He_2019_CVPR,
-    author = {He, Jingwen and Dong, Chao and Qiao, Yu},
-    title = {Modulating Image Restoration With Continual Levels via Adaptive Feature Modification Layers},
-    booktitle = {The IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
-    month = {June},
-    year = {2019}
-    }
 
 ### Dependencies
 
@@ -87,6 +76,13 @@ python train.py -opt options/train/train_basic.json
 python train.py -opt options/train/train_adafm.json
 ```
 
+### ELGAN-Net
+1. Prepare datasets, usually the DIV2K dataset.
+1. Modify the configuration file [`options/train/train_gan.json`](codes/options/train/train_gan.json)
+1. Run command:
+```c++
+python train.py -opt options/train/train_gan.json
+```
 ## Acknowledgement
 
-- This code borrows heavily from [BasicSR](https://github.com/xinntao/BasicSR).
+- This code borrows heavily from [AdaFM](https://github.com/hejingwenhejingwen/AdaFM).
